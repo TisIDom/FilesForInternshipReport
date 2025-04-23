@@ -1,0 +1,240 @@
+* PROJ3 SLINK MACRO
+PROJ3   START
+        B       102(0,15)
+        DC      17F'0'
+        DC      CL20'ASSEMBLED 20181030'
+        DC      CL10'TIME 13.35'
+        STM     14,12,12(13)
+        ST      13,4(0,15)
+        ST      15,8(0,13)
+        LR      13,15
+        USING   PROJ3,13
+*
+        USING   PROJ3+X'1000',R12
+        L       R12,BASE2
+        B       OVER
+BASE2   DC      A(PROJ3+X'1000')
+OVER    EQU     *
+*        EQREG   MACRO AT IRS
+R0       EQU     0
+R1       EQU     1
+R2       EQU     2
+R3       EQU     3
+R4       EQU     4
+R5       EQU     5
+R6       EQU     6
+R7       EQU     7
+R8       EQU     8
+R9       EQU     9
+R10      EQU     10
+R11      EQU     11
+R12      EQU     12
+R13      EQU     13
+R14      EQU     14
+R15      EQU     15
+*
+         OPEN    (TICKLER,,INFILE,,OUTFILE,(OUTPUT),ERRFILE,(OUTPUT))
+*
+         LA      R3,TABLE
+         LA      R4,0(0)
+         LA      R2,0(0)
+RDTCKL   EQU     *
+         GET     TICKLER,0(R4,R3)
+         LA      R4,5(0,R4)
+         A       R2,=F'1'
+         B       RDTCKL
+*
+RDFILE   EQU     *
+         LA      R5,LTABLE
+         WTO     TEXT=(R5)
+         CLOSE   (TICKLER)
+         GET     INFILE,IN_REC
+         CLC     IN_NAME,=25C' '
+         BC      8,WRTERR1
+         CLC     IN_ADDR,=25C' '
+         BC      8,WRTERR1
+         CLC     IN_CITY,=15C' '
+         BC      8,WRTERR1
+         CLC     IN_ARCD,=3C' '
+         BC      8,WRTERR1
+         CLC     IN_LOCN,=7C' '
+         BC      8,WRTERR1
+*
+         LR      R6,R2
+         LA      R4,0(0)
+         LA      R3,TABLE
+LPSTRT1  EQU     *
+         A       R3,=F'5'
+         CLC     0(3,R3),IN_ARCD
+         BE      PRELPSTRT2
+         BCT     R6,LPSTRT1
+         B       WRTERR2
+*
+PRELPSTRT2 EQU   *
+         LA      R7,51(0)
+         LA      R8,FIRSTFULL
+         LA      R9,0(0)
+         MVC     CRCTABBV,3(R3)
+LPSTRT2  EQU     *
+         CLC     CRCTABBV,0(R8)
+         BE      WRTREC
+         A       R8,=F'22'
+         BCT     R7,LPSTRT2
+*
+CLOSEA   EQU     *
+         CLOSE   (INFILE,,OUTFILE,,ERRFILE)
+         UNPK    ZTOT_IN,TOT_IN
+         UNPK    ZTOT_OUT,TOT_OUT
+         UNPK    ZTOT_ERR,TOT_ERR
+         OI      ZTOT_IN+9,X'F0'
+         OI      ZTOT_OUT+9,X'F0'
+         OI      ZTOT_ERR+9,X'F0'
+         MVC     INRECMSG+25(10),ZTOT_IN
+         MVC     OUTRECMSG+25(10),ZTOT_OUT
+         MVC     ERRRECMSG+25(10),ZTOT_ERR
+*
+         LA      R4,INRECMSG
+         WTO     TEXT=(R4)
+         LA      R4,OUTRECMSG
+         WTO     TEXT=(R4)
+         LA      R4,ERRRECMSG
+         WTO     TEXT=(R4)
+*
+         CLI     ZTOT_IN+9,X'F2'
+         BC      2,WRTERR3P
+         B       EXIT
+*
+*        RETURN MACRO
+EXIT     L       13,4(13)
+         LM      14,12,12(13)
+         LA      15,0(0,0)
+         BR      14
+*
+WRTREC   EQU     *
+         MVC     OUT_NAME,IN_NAME
+         MVC     OUT_ADDR,IN_ADDR
+         MVC     OUT_CITY,IN_CITY
+         MVC     OUT_ARCD,IN_ARCD
+         MVC     OUT_LOCN,IN_LOCN
+         MVC     OUT_STTE,2(R8)
+         AP      TOT_IN,=P'1'
+         AP      TOT_OUT,=P'1'
+         PUT     OUTFILE,OUT_REC
+         B       RDFILE
+*
+WRTERR1  EQU     *
+         MVC     OUT_ERR,=C'1'
+         AP      TOT_IN,=P'1'
+         AP      TOT_ERR,=P'1'
+         PUT     ERRFILE,OUT_ERR
+         B       RDFILE
+WRTERR2  EQU     *
+         MVC     OUT_ERR,=C'2'
+         AP      TOT_IN,=P'1'
+         AP      TOT_ERR,=P'1'
+         PUT     ERRFILE,OUT_ERR
+         B       RDFILE
+WRTERR3P EQU     *
+         LA      R4,ERR3MSG
+         WTO     TEXT=(R4)
+         B       EXIT
+* CODE YOUR CONSTANTS (DC) AND STORAGE (DS) HERE
+LTABLE    DC     H'35'
+TABLE     DS     200CL5
+COUNTER   DC     PL2'0'
+CRCTABBV  DC     CL2' '
+*
+IN_TCKL   DS     0CL5
+TCKL_ARCD DS     CL3
+TCKL_STCD DS     CL2
+*
+OUT_ERR   DS     CL1
+IN_REC    DS     0CL75
+IN_NAME   DS     CL25
+IN_ADDR   DS     CL25
+IN_CITY   DS     CL15
+IN_ARCD   DS     CL3
+IN_LOCN   DS     CL7
+*
+OUT_REC   DS     0CL99
+OUT_FILL  DC     4CL1' '
+OUT_ARCD  DS     CL3
+OUT_LOCN  DS     CL7
+OUT_NAME  DS     CL25
+OUT_ADDR  DS     CL25
+OUT_CITY  DS     CL15
+OUT_STTE  DS     CL20
+*
+TICKLER   DCB    DSORG=PS,MACRF=(GM),DDNAME=TICKLER,EODAD=RDFILE
+INFILE    DCB    DSORG=PS,MACRF=(GM),DDNAME=INFILE,EODAD=CLOSEA
+OUTFILE   DCB    DSORG=PS,MACRF=(PM),DDNAME=OUTFILE
+ERRFILE   DCB    DSORG=PS,MACRF=(PM),DDNAME=ERRFILE
+*
+TOT_IN    DC     PL5'0'
+TOT_OUT   DC     PL5'0'
+TOT_ERR   DC     PL5'0'
+ZTOT_IN   DC     ZL10'0'
+ZTOT_OUT  DC     ZL10'0'
+ZTOT_ERR  DC     ZL10'0'
+INRECMSG  DC     H'35'
+          DC     CL35'TOTAL INPUT RECORDS  = '
+OUTRECMSG DC     H'35'
+          DC     CL35'TOTAL OUTPUT RECORDS = '
+ERRRECMSG DC     H'35'
+          DC     CL35'TOTAL ERROR RECORDS  = '
+ERR3MSG   DC     H'40'
+          DC     CL40'THIS RUN HAS A HIGH ERROR RATE'
+*
+FIRSTFULL DC        CL22'ALALABAMA'
+          DC        CL22'AKALASKA'
+          DC        CL22'AZARIZONA'
+          DC        CL22'ARARKANSAS'
+          DC        CL22'CACALIFORNIA'
+          DC        CL22'COCOLORADO'
+          DC        CL22'CTCONNECTICUT'
+          DC        CL22'DEDELAWARE'
+          DC        CL22'DCDISTRICT OF COLUMBIA'
+          DC        CL22'FLFLORIDA'
+          DC        CL22'GAGEORGIA'
+          DC        CL22'HIHAWAII'
+          DC        CL22'IDIDAHO'
+          DC        CL22'ILILLINOIS'
+          DC        CL22'ININDIANA'
+          DC        CL22'IAIOWA'
+          DC        CL22'KSKANSAS'
+          DC        CL22'KYKENTUCKY'
+          DC        CL22'LALOUISIANA'
+          DC        CL22'MEMAINE'
+          DC        CL22'MDMARYLAND'
+          DC        CL22'MAMASSACHUSETTS'
+          DC        CL22'MIMICHIGAN'
+          DC        CL22'MNMINNESOTA'
+          DC        CL22'MSMISSISSIPPI'
+          DC        CL22'MOMISSOURI'
+          DC        CL22'MTMONTANA'
+          DC        CL22'NENEBRASKA'
+          DC        CL22'NVNEVADA'
+          DC        CL22'NHNEW HAMPSHIRE'
+          DC        CL22'NJNEW JERSEY'
+          DC        CL22'NMNEW MEXICO'
+          DC        CL22'NYNEW YORK'
+          DC        CL22'NCNORTH CAROLINA'
+          DC        CL22'NDNORTH DAKOTA'
+          DC        CL22'OHOHIO'
+          DC        CL22'OKOKLAHOMA'
+          DC        CL22'OROREGON'
+          DC        CL22'PAPENNSYLVANIA'
+          DC        CL22'RIRHODE ISLAND'
+          DC        CL22'SCSOUTH CAROLINA'
+          DC        CL22'SDSOUTH DAKOTA'
+          DC        CL22'TNTENNESSEE'
+          DC        CL22'TXTEXAS'
+          DC        CL22'UTUTAH'
+          DC        CL22'VTVERMONT'
+          DC        CL22'VAVIRGINIA'
+          DC        CL22'WAWASHINGTON'
+          DC        CL22'WVWEST VIRGINIA'
+          DC        CL22'WIWISCONSIN'
+          DC        CL22'WYWYOMING'
+*
+          END    PROJ3
